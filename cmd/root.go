@@ -3,34 +3,40 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"github.com/sajuno/goon/agent"
 	"github.com/spf13/cobra"
 	"log"
 	"time"
 )
 
+// global agent instance
+var ag *agent.Agent
+
 func NewRootCmd(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "goon",
 		Short: "goon's root cmd",
+		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			if err := loadConfig(); err != nil {
+				return err
+			}
+			ag = agent.New(agent.AssistantConfig{ID: cfg.AssistantID})
+			return nil
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return run(ctx)
 		},
 	}
 
+	cmd.AddCommand(goonTest(ctx))
+
 	return cmd
 }
 
 func run(ctx context.Context) error {
-	cfg, err := loadConfig()
-	if err != nil {
-		return err
-	}
-
-	log.Println(cfg)
-
 	done := make(chan error, 1)
 	go func() {
-		log.Println("Work work..")
+		log.Println("WriteTest work..")
 		defer log.Println("Job's done")
 
 		select {

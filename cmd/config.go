@@ -13,7 +13,9 @@ type config struct {
 	APIKey      string `mapstructure:"api_key"`
 }
 
-func loadConfig() (config, error) {
+var cfg *config
+
+func loadConfig() error {
 	viper.SetConfigName("goon.toml")
 	viper.SetConfigType("toml")
 	viper.AddConfigPath(".")
@@ -22,17 +24,17 @@ func loadConfig() (config, error) {
 	viper.AutomaticEnv()
 	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
 
-	var c config
 	if err := viper.ReadInConfig(); err != nil {
 		var configFileNotFoundError viper.ConfigFileNotFoundError
 		if !errors.As(err, &configFileNotFoundError) {
-			return config{}, fmt.Errorf("no configuration file found: %w", err)
+			return fmt.Errorf("no configuration file found: %w", err)
 		}
 	}
 
-	if err := viper.Unmarshal(&c); err != nil {
-		return config{}, fmt.Errorf("unable to decode config into struct: %w", err)
+	cfg = &config{}
+	if err := viper.Unmarshal(cfg); err != nil {
+		return fmt.Errorf("unable to decode config into struct: %w", err)
 	}
 
-	return c, nil
+	return nil
 }
