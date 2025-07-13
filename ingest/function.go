@@ -12,11 +12,17 @@ import (
 )
 
 type Function struct {
-	Source string
-	Path   string
+	Source  string
+	Path    string
+	Package string
 }
 
-func FindFunction(rootPath, name string) (Function, error) {
+type FindFunctionQuery struct {
+	Name    string
+	Package string
+}
+
+func FindFunction(rootPath string, q FindFunctionQuery) (Function, error) {
 	var source string
 	var filePath string
 
@@ -31,8 +37,12 @@ func FindFunction(rootPath, name string) (Function, error) {
 			return nil
 		}
 
+		if node.Name.Name != "" && node.Name.Name != q.Package {
+			return nil
+		}
+
 		for _, decl := range node.Decls {
-			if fn, ok := decl.(*ast.FuncDecl); ok && fn.Name.Name == name {
+			if fn, ok := decl.(*ast.FuncDecl); ok && fn.Name.Name == q.Name {
 				start := fset.Position(fn.Pos()).Offset
 				end := fset.Position(fn.End()).Offset
 
@@ -55,8 +65,8 @@ func FindFunction(rootPath, name string) (Function, error) {
 	}
 
 	if source == "" {
-		return Function{}, fmt.Errorf("function %s not found", name)
+		return Function{}, fmt.Errorf("function %s not found", q.Name)
 	}
 
-	return Function{Source: source, Path: filePath}, nil
+	return Function{Source: source, Path: filePath, Package: q.Package}, nil
 }

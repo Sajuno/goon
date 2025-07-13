@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/sajuno/goon/agent"
+	"github.com/sashabaranov/go-openai"
 	"github.com/spf13/cobra"
 	"log"
 	"time"
@@ -20,7 +21,8 @@ func NewRootCmd(ctx context.Context) *cobra.Command {
 			if err := loadConfig(); err != nil {
 				return err
 			}
-			ag = agent.New(agent.AssistantConfig{ID: cfg.AssistantID})
+
+			ag = agent.New(openai.NewClient(cfg.APIKey), agent.AssistantConfig{ID: cfg.AssistantID})
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
