@@ -18,7 +18,7 @@ func goonTest(ctx context.Context) *cobra.Command {
 
 			err := ag.WriteTest(ctx, funcName, pkgName)
 			if err != nil {
-				return fmt.Errorf("failed to generate test: %w", err)
+				return fmt.Errorf("failed to generate goonTest: %w", err)
 			}
 
 			return nil

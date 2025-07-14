@@ -1,2 +1,2 @@
 # Goon
-OpenAI assistant orchestrator and AI automation tool
+RAG enhanced, opinionated Go code assistant

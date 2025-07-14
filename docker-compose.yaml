@@ -1,0 +1,11 @@
+services:
+  chroma:
+    image: ghcr.io/chroma-core/chroma:latest
+    container_name: chroma
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./chroma-data:/chroma
+    environment:
+      - IS_PERSISTENT=TRUE
+    restart: unless-stopped
