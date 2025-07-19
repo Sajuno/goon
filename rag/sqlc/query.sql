@@ -12,6 +12,7 @@ INSERT INTO code_chunks (
     end_line,
     content,
     doc,
+    receiver_name,
     embedding,
     token_count,
     sha256
@@ -23,6 +24,7 @@ INSERT INTO code_chunks (
     @end_line,
     @content,
     @doc,
+    @receiver_name,
     @embedding,
     @token_count,
     @sha256

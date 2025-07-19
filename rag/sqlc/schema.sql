@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS code_chunks (
     end_line INT NOT NULL,
     content TEXT NOT NULL,      -- Code itself as raw text
     doc TEXT,                   -- Optional comments
+    receiver_name TEXT,         -- Optional receiver for methods
 
     -- 1536 represents the vector dimensions of GPT's text-embedding-3-small
     embedding vector(1536),

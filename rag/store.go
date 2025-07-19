@@ -13,4 +13,7 @@ type EmbeddedChunk struct {
 	golang.Chunk
 
 	Vector []float32
+
+	// https://platform.openai.com/tokenizer
+	Tokens int
 }
