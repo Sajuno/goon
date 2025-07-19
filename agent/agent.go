@@ -3,7 +3,8 @@ package agent
 import (
 	"context"
 	"fmt"
-	"github.com/sajuno/goon/ingest"
+	"github.com/sajuno/goon/golang"
+	"github.com/sajuno/goon/rag"
 	"github.com/sashabaranov/go-openai"
 	"log"
 	"time"
@@ -13,16 +14,18 @@ type AssistantConfig struct {
 	ID string
 }
 type Agent struct {
-	cfg    AssistantConfig
-	client *openai.Client
+	cfg AssistantConfig
+
+	client   *openai.Client
+	ragStore rag.Store
 }
 
-func New(client *openai.Client, cfg AssistantConfig) *Agent {
-	return &Agent{cfg: cfg, client: client}
+func New(client *openai.Client, ragStore rag.Store, cfg AssistantConfig) *Agent {
+	return &Agent{cfg: cfg, client: client, ragStore: ragStore}
 }
 
 func (a *Agent) WriteTest(ctx context.Context, funcName, pkgName string) error {
-	fn, err := ingest.FindFunction(".", ingest.FindFunctionQuery{
+	fn, err := golang.FindFunction(".", golang.FindFunctionQuery{
 		Name:    funcName,
 		Package: pkgName,
 	})

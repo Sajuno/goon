@@ -1,4 +1,4 @@
-package ingest
+package golang
 
 import (
 	"fmt"
@@ -7,6 +7,7 @@ import (
 	"go/parser"
 	"go/token"
 	"io/fs"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -16,6 +17,10 @@ import (
 // They usually correspond directly to an AST node
 
 type ChunkKind string
+
+func (k ChunkKind) String() string {
+	return string(k)
+}
 
 var (
 	ChunkKindFunc ChunkKind = "func"
@@ -46,7 +51,25 @@ type EmbeddedChunk struct {
 	Vector []float64
 }
 
-func findGoFiles(path string) ([]string, error) {
+func ChunkRepository(path string) ([]Chunk, error) {
+	files, err := findFiles(path)
+	if err != nil {
+		return nil, err
+	}
+
+	var all []Chunk
+	for _, f := range files {
+		chunks, err := chunkFile(f)
+		if err != nil {
+			log.Printf("❌ Error parsing %s: %v", f, err)
+			continue
+		}
+		all = append(all, chunks...)
+	}
+	return all, nil
+}
+
+func findFiles(path string) ([]string, error) {
 	var files []string
 	err := filepath.WalkDir(path, func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() {

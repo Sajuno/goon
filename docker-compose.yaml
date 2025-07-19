@@ -1,11 +1,14 @@
 services:
-  chroma:
-    image: ghcr.io/chroma-core/chroma:latest
-    container_name: chroma
-    ports:
-      - "8000:8000"
-    volumes:
-      - ./chroma-data:/chroma
+  postgres:
+    image: pgvector/pgvector:pg17
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
     environment:
-      - IS_PERSISTENT=TRUE
-    restart: unless-stopped
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: goon
+    ports:
+      - "5432:5432"
