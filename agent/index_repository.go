@@ -44,11 +44,6 @@ func (a *Agent) batchEmbedChunks(ctx context.Context, chunks []golang.Chunk) ([]
 			return nil
 		}
 
-		if len(batchContents) == 0 {
-			log.Println("🛑 Tried to embed empty batch — skipping.")
-			return nil
-		}
-
 		resp, err := a.client.CreateEmbeddings(ctx, openai.EmbeddingRequestStrings{
 			Input: batchContents,
 			Model: openai.SmallEmbedding3,

@@ -48,6 +48,7 @@ func NewRootCmd(ctx context.Context) *cobra.Command {
 
 	cmd.AddCommand(goonExplain(ctx))
 	cmd.AddCommand(goonIndex(ctx))
+	cmd.AddCommand(goonRepl(ctx))
 
 	return cmd
 }
