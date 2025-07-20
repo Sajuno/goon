@@ -12,7 +12,7 @@ import (
 	"github.com/chzyer/readline"
 )
 
-func Start(ctx context.Context, ag *agent.Agent) {
+func Start(ctx context.Context, ag *agent.Agent) error {
 	rl, err := readline.NewEx(&readline.Config{
 		Prompt:          "\033[31m> \033[0m",
 		HistoryFile:     "/tmp/goon_history.tmp",
@@ -20,7 +20,7 @@ func Start(ctx context.Context, ag *agent.Agent) {
 		EOFPrompt:       "exit",
 	})
 	if err != nil {
-		log.Fatalf("failed to start REPL: %v", err)
+		return err
 	}
 	defer rl.Close()
 
@@ -32,7 +32,7 @@ func Start(ctx context.Context, ag *agent.Agent) {
 		select {
 		case <-ctx.Done():
 			fmt.Println("Context cancelled, exiting..")
-			return
+			return nil
 		default:
 			line, err := rl.Readline()
 			if err != nil {
@@ -40,12 +40,11 @@ func Start(ctx context.Context, ag *agent.Agent) {
 					// exit directly if ctrl+c on empty line
 					if len(rl.Line().Line) == 0 {
 						fmt.Println("Goon REPL interrupted")
-						return
+						return nil
 					}
 					continue
 				} else if err == io.EOF {
-					fmt.Println("Exiting...")
-					return
+					return nil
 				}
 				log.Printf("read error: %v", err)
 				continue
@@ -58,7 +57,7 @@ func Start(ctx context.Context, ag *agent.Agent) {
 
 			if strings.HasPrefix(line, ":") {
 				if handleBuiltin(line) {
-					return
+					return nil
 				}
 				continue
 			}

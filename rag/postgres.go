@@ -27,7 +27,7 @@ func (s *PGStore) SaveChunks(ctx context.Context, chunks []Chunk) error {
 		params = append(params, pg.CreateChunksParams{
 			SymbolName:   chunk.Name,
 			SymbolType:   chunk.Kind.String(),
-			FilePath:     chunk.FilePath,
+			Package:      chunk.Package,
 			EndLine:      int32(chunk.EndLine),
 			Content:      chunk.Content,
 			Doc:          pgtype.Text{String: chunk.Doc},

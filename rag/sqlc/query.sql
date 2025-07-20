@@ -1,13 +1,12 @@
 -- name: CreateChunk :one
-INSERT INTO code_chunks (symbol_name, symbol_type, file_path, start_line, end_line, content, doc, embedding, token_count, sha256, package)
-VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+INSERT INTO code_chunks (symbol_name, symbol_type, start_line, end_line, content, doc, embedding, token_count, sha256, package)
+VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 RETURNING *;
 
 -- name: CreateChunks :copyfrom
 INSERT INTO code_chunks (
     symbol_name,
     symbol_type,
-    file_path,
     start_line,
     end_line,
     content,
@@ -20,7 +19,6 @@ INSERT INTO code_chunks (
 ) VALUES (
     @symbol_name,
     @symbol_type,
-    @file_path,
     @start_line,
     @end_line,
     @content,

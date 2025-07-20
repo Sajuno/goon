@@ -6,13 +6,11 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"go/ast"
-	"go/parser"
 	"go/token"
+	"golang.org/x/tools/go/packages"
 	"io"
-	"io/fs"
 	"log"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -72,68 +70,56 @@ func (c Chunk) Sha256() string {
 	return hex.EncodeToString(sum)
 }
 
+func (c Chunk) FQN() string {
+	if c.ReceiverName != "" {
+		return fmt.Sprintf("%s.(%s).%s", c.Package, c.ReceiverName, c.Name)
+	}
+	return fmt.Sprintf("%s.%s", c.Package, c.Name)
+}
+
 func ChunkRepository(path string) ([]Chunk, error) {
-	files, err := findFiles(path)
+	cfg := &packages.Config{
+		Mode: packages.LoadSyntax, // gives you AST + type info
+		Dir:  path,
+	}
+	pkgs, err := packages.Load(cfg, "./...")
 	if err != nil {
 		return nil, err
 	}
 
 	var all []Chunk
-	for _, f := range files {
-		chunks, err := chunkFile(f)
-		if err != nil {
-			log.Printf("❌ Error parsing %s: %v", f, err)
-			continue
+	for _, pkg := range pkgs {
+		for _, file := range pkg.Syntax {
+			fset := pkg.Fset
+			chunks, err := chunkASTFile(file, fset, pkg.PkgPath)
+			if err != nil {
+				log.Printf("❌ Error chunking %s: %v", file.Name.Name, err)
+				continue
+			}
+			all = append(all, chunks...)
 		}
-		all = append(all, chunks...)
 	}
+
 	return all, nil
 }
 
-func findFiles(path string) ([]string, error) {
-	var files []string
-	err := filepath.WalkDir(path, func(path string, d fs.DirEntry, err error) error {
-		if err != nil || d.IsDir() {
-			return nil
-		}
-
-		if !strings.HasSuffix(d.Name(), ".go") {
-			return nil
-		}
-
-		files = append(files, path)
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return files, nil
-}
-
 // chunkFile reads a go file and deconstructs it into Chunks
-func chunkFile(path string) ([]Chunk, error) {
-	fset := token.NewFileSet()
-
-	// get file level ast node
-	node, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse file %s: %w", path, err)
-	}
-
-	// read in source file so we can the textual chunk content
-	f, err := os.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read source file on path %s: %w", path, err)
-	}
-	source := string(f)
-
+func chunkASTFile(file *ast.File, fset *token.FileSet, pkgPath string) ([]Chunk, error) {
 	var chunks []Chunk
-	for _, decl := range node.Decls {
+
+	filename := fset.Position(file.Pos()).Filename
+	b, err := os.ReadFile(filename)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read source file: %w", err)
+	}
+	source := string(b)
+
+	for _, decl := range file.Decls {
 		switch d := decl.(type) {
 		case *ast.FuncDecl:
 			start := fset.Position(d.Pos())
 			end := fset.Position(d.End())
+
 			kind := ChunkKindFunc
 			if strings.HasPrefix(d.Name.Name, "Test") {
 				kind = ChunkKindTest
@@ -142,11 +128,12 @@ func chunkFile(path string) ([]Chunk, error) {
 			if ok {
 				kind = ChunkKindMethod
 			}
+
 			chunks = append(chunks, Chunk{
 				ID:           uuid.NewString(),
 				Content:      source[start.Offset:end.Offset],
-				FilePath:     path,
-				Package:      node.Name.Name,
+				FilePath:     filename,
+				Package:      pkgPath,
 				Kind:         kind,
 				Name:         d.Name.Name,
 				StartLine:    start.Line,
@@ -154,15 +141,13 @@ func chunkFile(path string) ([]Chunk, error) {
 				Doc:          d.Doc.Text(),
 				ReceiverName: receiver,
 			})
+
 		case *ast.GenDecl:
-			// Skip import tokens
 			if d.Tok == token.IMPORT {
 				continue
 			}
-
 			for _, spec := range d.Specs {
 				var name string
-
 				start := fset.Position(spec.Pos())
 				end := fset.Position(spec.End())
 				kind := classifyGenDecl(d)
@@ -181,8 +166,8 @@ func chunkFile(path string) ([]Chunk, error) {
 				chunks = append(chunks, Chunk{
 					ID:        uuid.NewString(),
 					Content:   source[start.Offset:end.Offset],
-					FilePath:  path,
-					Package:   node.Name.Name,
+					FilePath:  filename,
+					Package:   pkgPath,
 					Kind:      kind,
 					Name:      name,
 					StartLine: start.Line,

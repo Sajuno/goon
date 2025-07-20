@@ -10,7 +10,6 @@ func unmarshalChunk(chunk pg.CodeChunk) Chunk {
 		Chunk: golang.Chunk{
 			ID:           chunk.ID.String(),
 			Content:      chunk.Content,
-			FilePath:     chunk.FilePath,
 			Package:      chunk.Package,
 			Kind:         golang.ChunkKind(chunk.SymbolType),
 			Name:         chunk.SymbolName,
@@ -32,7 +31,6 @@ func unmarshalSimilarChunks(chunks []pg.FindSimilarChunksRow) []SimilarChunk {
 				Chunk: golang.Chunk{
 					ID:           chunk.ID.String(),
 					Content:      chunk.Content,
-					FilePath:     chunk.FilePath,
 					Package:      chunk.Package,
 					Kind:         golang.ChunkKind(chunk.SymbolType),
 					Name:         chunk.SymbolName,

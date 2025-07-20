@@ -13,7 +13,6 @@ type CodeChunk struct {
 	ID           pgtype.UUID
 	SymbolName   string
 	SymbolType   string
-	FilePath     string
 	Package      string
 	StartLine    int32
 	EndLine      int32

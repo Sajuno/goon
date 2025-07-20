@@ -7,7 +7,6 @@ CREATE TABLE IF NOT EXISTS code_chunks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     symbol_name TEXT NOT NULL,  -- the name as which the symbol was declared
     symbol_type TEXT NOT NULL,
-    file_path TEXT NOT NULL,
     package TEXT NOT NULL,
     start_line INT NOT NULL,
     end_line INT NOT NULL,

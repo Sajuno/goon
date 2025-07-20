@@ -13,15 +13,14 @@ import (
 )
 
 const createChunk = `-- name: CreateChunk :one
-INSERT INTO code_chunks (symbol_name, symbol_type, file_path, start_line, end_line, content, doc, embedding, token_count, sha256, package)
-VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-RETURNING id, symbol_name, symbol_type, file_path, package, start_line, end_line, content, doc, receiver_name, embedding, token_count, sha256, created_at
+INSERT INTO code_chunks (symbol_name, symbol_type, start_line, end_line, content, doc, embedding, token_count, sha256, package)
+VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+RETURNING id, symbol_name, symbol_type, package, start_line, end_line, content, doc, receiver_name, embedding, token_count, sha256, created_at
 `
 
 type CreateChunkParams struct {
 	SymbolName string
 	SymbolType string
-	FilePath   string
 	StartLine  int32
 	EndLine    int32
 	Content    string
@@ -36,7 +35,6 @@ func (q *Queries) CreateChunk(ctx context.Context, arg CreateChunkParams) (CodeC
 	row := q.db.QueryRow(ctx, createChunk,
 		arg.SymbolName,
 		arg.SymbolType,
-		arg.FilePath,
 		arg.StartLine,
 		arg.EndLine,
 		arg.Content,
@@ -51,7 +49,6 @@ func (q *Queries) CreateChunk(ctx context.Context, arg CreateChunkParams) (CodeC
 		&i.ID,
 		&i.SymbolName,
 		&i.SymbolType,
-		&i.FilePath,
 		&i.Package,
 		&i.StartLine,
 		&i.EndLine,
@@ -69,7 +66,6 @@ func (q *Queries) CreateChunk(ctx context.Context, arg CreateChunkParams) (CodeC
 type CreateChunksParams struct {
 	SymbolName   string
 	SymbolType   string
-	FilePath     string
 	StartLine    int32
 	EndLine      int32
 	Content      string
@@ -82,7 +78,7 @@ type CreateChunksParams struct {
 }
 
 const findSimilarChunks = `-- name: FindSimilarChunks :many
-SELECT id, symbol_name, symbol_type, file_path, package, start_line, end_line, content, doc, receiver_name, embedding, token_count, sha256, created_at,
+SELECT id, symbol_name, symbol_type, package, start_line, end_line, content, doc, receiver_name, embedding, token_count, sha256, created_at,
        embedding <-> $1 AS distance
 FROM code_chunks
 ORDER BY embedding <-> $1
@@ -98,7 +94,6 @@ type FindSimilarChunksRow struct {
 	ID           pgtype.UUID
 	SymbolName   string
 	SymbolType   string
-	FilePath     string
 	Package      string
 	StartLine    int32
 	EndLine      int32
@@ -125,7 +120,6 @@ func (q *Queries) FindSimilarChunks(ctx context.Context, arg FindSimilarChunksPa
 			&i.ID,
 			&i.SymbolName,
 			&i.SymbolType,
-			&i.FilePath,
 			&i.Package,
 			&i.StartLine,
 			&i.EndLine,

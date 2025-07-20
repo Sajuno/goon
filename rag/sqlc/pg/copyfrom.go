@@ -31,7 +31,6 @@ func (r iteratorForCreateChunks) Values() ([]interface{}, error) {
 	return []interface{}{
 		r.rows[0].SymbolName,
 		r.rows[0].SymbolType,
-		r.rows[0].FilePath,
 		r.rows[0].StartLine,
 		r.rows[0].EndLine,
 		r.rows[0].Content,
@@ -49,5 +48,5 @@ func (r iteratorForCreateChunks) Err() error {
 }
 
 func (q *Queries) CreateChunks(ctx context.Context, arg []CreateChunksParams) (int64, error) {
-	return q.db.CopyFrom(ctx, []string{"code_chunks"}, []string{"symbol_name", "symbol_type", "file_path", "start_line", "end_line", "content", "doc", "receiver_name", "embedding", "token_count", "sha256", "package"}, &iteratorForCreateChunks{rows: arg})
+	return q.db.CopyFrom(ctx, []string{"code_chunks"}, []string{"symbol_name", "symbol_type", "start_line", "end_line", "content", "doc", "receiver_name", "embedding", "token_count", "sha256", "package"}, &iteratorForCreateChunks{rows: arg})
 }
