@@ -7,10 +7,11 @@ import (
 	"github.com/google/uuid"
 	"go/ast"
 	"go/token"
+	"go/types"
 	"golang.org/x/tools/go/packages"
 	"io"
-	"log"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -56,6 +57,12 @@ type Chunk struct {
 
 	// Receiver is only populated for methods
 	ReceiverName string
+
+	// Chunk FQN's this chunk references
+	References []string
+
+	// Chunk FQN's this chunk calls
+	Calls []string
 }
 
 // Sha256 returns the chunks checksum based on a couple of fields
@@ -77,9 +84,13 @@ func (c Chunk) FQN() string {
 	return fmt.Sprintf("%s.%s", c.Package, c.Name)
 }
 
+func (c Chunk) IsInvokable() bool {
+	return c.Kind == ChunkKindMethod || c.Kind == ChunkKindFunc
+}
+
 func ChunkRepository(path string) ([]Chunk, error) {
 	cfg := &packages.Config{
-		Mode: packages.LoadSyntax, // gives you AST + type info
+		Mode: packages.LoadSyntax,
 		Dir:  path,
 	}
 	pkgs, err := packages.Load(cfg, "./...")
@@ -87,24 +98,43 @@ func ChunkRepository(path string) ([]Chunk, error) {
 		return nil, err
 	}
 
-	var all []Chunk
+	var allChunks []Chunk
+
 	for _, pkg := range pkgs {
+		fset := pkg.Fset
+		info := pkg.TypesInfo
+		objectToFQN := make(map[types.Object]string)
+
+		// Collect all chunks and build object -> FQN map
+		var pkgChunks []Chunk
 		for _, file := range pkg.Syntax {
-			fset := pkg.Fset
-			chunks, err := chunkASTFile(file, fset, pkg.PkgPath)
+			chunks, err := chunkASTFile(file, fset, pkg.PkgPath, info)
 			if err != nil {
-				log.Printf("❌ Error chunking %s: %v", file.Name.Name, err)
-				continue
+				return nil, fmt.Errorf("failed to chunk file %s: %w", file.Name.Name, err)
 			}
-			all = append(all, chunks...)
+
+			for _, chunk := range chunks {
+				if obj := getObject(chunk, info, fset); obj != nil {
+					objectToFQN[obj] = chunk.FQN()
+				}
+				pkgChunks = append(pkgChunks, chunk)
+			}
 		}
+
+		// resolve all actual refs and assign them to the chunk
+		// so modifies chunk under the hood
+		for i := range pkgChunks {
+			resolveReferences(&pkgChunks[i], pkg.Syntax, info, objectToFQN, fset)
+		}
+
+		allChunks = append(allChunks, pkgChunks...)
 	}
 
-	return all, nil
+	return allChunks, nil
 }
 
 // chunkFile reads a go file and deconstructs it into Chunks
-func chunkASTFile(file *ast.File, fset *token.FileSet, pkgPath string) ([]Chunk, error) {
+func chunkASTFile(file *ast.File, fset *token.FileSet, pkgPath string, info *types.Info) ([]Chunk, error) {
 	var chunks []Chunk
 
 	filename := fset.Position(file.Pos()).Filename
@@ -225,4 +255,64 @@ func getReceiver(fn *ast.FuncDecl) (string, bool) {
 	}
 
 	return "", false
+}
+
+// getObject finds the object definition based on chunk metadata
+func getObject(chunk Chunk, info *types.Info, fset *token.FileSet) types.Object {
+	for ident, obj := range info.Defs {
+		if ident == nil || obj == nil {
+			continue
+		}
+		if ident.Name != chunk.Name {
+			continue
+		}
+		pos := fset.Position(ident.Pos())
+		if pos.Line == chunk.StartLine {
+			return obj
+		}
+	}
+	return nil
+}
+
+func resolveReferences(
+	chunk *Chunk,
+	files []*ast.File,
+	info *types.Info,
+	objectToFQN map[types.Object]string,
+	fset *token.FileSet,
+) {
+	referenced := make(map[string]struct{})
+
+	for _, file := range files {
+		ast.Inspect(file, func(n ast.Node) bool {
+			if n == nil {
+				return false
+			}
+			pos := fset.Position(n.Pos())
+			if pos.Line < chunk.StartLine || pos.Line > chunk.EndLine {
+				return false
+			}
+
+			id, ok := n.(*ast.Ident)
+			if !ok {
+				return true
+			}
+
+			obj := info.Uses[id]
+			if obj == nil {
+				return true
+			}
+
+			if fqn, ok := objectToFQN[obj]; ok && fqn != chunk.FQN() {
+				referenced[fqn] = struct{}{}
+			}
+
+			return true
+		})
+	}
+
+	for fqn := range referenced {
+		chunk.References = append(chunk.References, fqn)
+	}
+	sort.Strings(chunk.References)
 }
