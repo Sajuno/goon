@@ -42,6 +42,19 @@ func (s *PGStore) SaveChunks(ctx context.Context, chunks []Chunk) error {
 	if err != nil {
 		return err
 	}
+
+	q := `
+DROP INDEX IF EXISTS code_chunks_embedding_idx;
+CREATE INDEX code_chunks_embedding_idx 
+ON code_chunks 
+USING ivfflat (embedding vector_cosine_ops) 
+WITH (lists = 100);`
+
+	_, err = s.pool.Exec(ctx, q)
+	if err != nil {
+		return fmt.Errorf("failed to recreate embedding index: %w", err)
+	}
+
 	return nil
 }
 

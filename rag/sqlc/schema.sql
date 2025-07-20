@@ -21,6 +21,3 @@ CREATE TABLE IF NOT EXISTS code_chunks (
     sha256 TEXT NOT NULL,
     created_at TIMESTAMPTZ DEFAULT now()
 );
-
--- Recommended index
--- CREATE INDEX ON code_chunks USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
