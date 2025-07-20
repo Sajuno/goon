@@ -15,7 +15,7 @@ import (
 func Start(ctx context.Context, ag *agent.Agent) {
 	rl, err := readline.NewEx(&readline.Config{
 		Prompt:          "\033[31m> \033[0m",
-		HistoryFile:     "/tmp/goon_history.tmp", // TODO: save history to postgres somehow
+		HistoryFile:     "/tmp/goon_history.tmp",
 		InterruptPrompt: "^C",
 		EOFPrompt:       "exit",
 	})
@@ -27,45 +27,44 @@ func Start(ctx context.Context, ag *agent.Agent) {
 	fmt.Println("Goon REPL is ready. Type ':help' or enter a command.")
 
 	h := newCommandHandler(ag)
-	inputChan := make(chan string)
-	errChan := make(chan error)
-
-	go func() {
-		for {
-			line, err := rl.Readline()
-			if err != nil {
-				errChan <- err
-				return
-			}
-			inputChan <- strings.TrimSpace(line)
-		}
-	}()
 
 	for {
 		select {
 		case <-ctx.Done():
 			fmt.Println("Context cancelled, exiting..")
 			return
-		case err := <-errChan:
-			if errors.Is(err, readline.ErrInterrupt) || err == io.EOF {
-				fmt.Println("Goon REPL interrupted")
-				return
+		default:
+			line, err := rl.Readline()
+			if err != nil {
+				if errors.Is(err, readline.ErrInterrupt) {
+					// exit directly if ctrl+c on empty line
+					if len(rl.Line().Line) == 0 {
+						fmt.Println("Goon REPL interrupted")
+						return
+					}
+					continue
+				} else if err == io.EOF {
+					fmt.Println("Exiting...")
+					return
+				}
+				log.Printf("read error: %v", err)
+				continue
 			}
-			log.Printf("error: %v", err)
-			return
-		case line := <-inputChan:
+
+			line = strings.TrimSpace(line)
 			if line == "" {
 				continue
 			}
+
 			if strings.HasPrefix(line, ":") {
 				if handleBuiltin(line) {
 					return
 				}
 				continue
 			}
-			err = h.handleCommand(ctx, line)
-			if err != nil {
-				errChan <- err
+
+			if err := h.handleCommand(ctx, line); err != nil {
+				log.Printf("command error: %v", err)
 			}
 		}
 	}

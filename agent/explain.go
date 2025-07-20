@@ -27,7 +27,7 @@ func (a *Agent) Explain(ctx context.Context, query string) (string, error) {
 		chunks = append(chunks, chunk.Chunk)
 	}
 
-	promptContext := buildPromptContext(chunks, 8000)
+	promptContext := buildPromptContext(chunks, 25000)
 	prompt := fmt.Sprintf(`
 %s
 
@@ -42,7 +42,7 @@ Be concise, accurate, and helpful to a developer unfamiliar with this codebase.
 
 	response, err := a.promptAI(ctx, prompt)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("LLM prompt failed: %w", err)
 	}
 
 	return response, nil

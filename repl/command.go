@@ -31,7 +31,7 @@ func (h *commandHandler) explain(ctx context.Context, prompt string) error {
 	response, err := h.agent.Explain(ctx, prompt)
 	fmt.Print("\r\033[2K") // clear 'spinner'
 	if err != nil {
-		return fmt.Errorf("failed to generate goonExplain: %w", err)
+		return fmt.Errorf(`failed to explain "%s": %w`, prompt, err)
 	}
 
 	fmt.Println(response)
