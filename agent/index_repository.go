@@ -7,6 +7,7 @@ import (
 	"github.com/sajuno/goon/golang"
 	"github.com/sajuno/goon/rag"
 	"github.com/sashabaranov/go-openai"
+	"log"
 )
 
 func (a *Agent) IndexRepository(ctx context.Context, path string) error {
@@ -20,8 +21,9 @@ func (a *Agent) IndexRepository(ctx context.Context, path string) error {
 		return fmt.Errorf("invalid tiktoken encoding: %w", err)
 	}
 
-	var embeddedChunks []rag.EmbeddedChunk
+	var embeddedChunks []rag.Chunk
 	for _, chunk := range chunks {
+		log.Printf("indexing chunk: %s\n", chunk.Name)
 		resp, err := a.client.CreateEmbeddings(ctx, openai.EmbeddingRequest{
 			Input: chunk.Content,
 			Model: openai.SmallEmbedding3,
@@ -30,7 +32,7 @@ func (a *Agent) IndexRepository(ctx context.Context, path string) error {
 			return err
 		}
 		embedding := resp.Data[0].Embedding
-		embeddedChunks = append(embeddedChunks, rag.EmbeddedChunk{
+		embeddedChunks = append(embeddedChunks, rag.Chunk{
 			Chunk:  chunk,
 			Vector: embedding,
 			Tokens: len(enc.Encode(chunk.Content, nil, nil)),

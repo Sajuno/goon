@@ -2,6 +2,7 @@ package rag
 
 import (
 	"context"
+	"fmt"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/pgvector/pgvector-go"
@@ -20,7 +21,7 @@ func NewPGStore(pool *pgxpool.Pool) *PGStore {
 	}
 }
 
-func (s *PGStore) SaveChunks(ctx context.Context, chunks []EmbeddedChunk) error {
+func (s *PGStore) SaveChunks(ctx context.Context, chunks []Chunk) error {
 	var params []pg.CreateChunksParams
 	for _, chunk := range chunks {
 		params = append(params, pg.CreateChunksParams{
@@ -42,4 +43,20 @@ func (s *PGStore) SaveChunks(ctx context.Context, chunks []EmbeddedChunk) error 
 		return err
 	}
 	return nil
+}
+
+func (s *PGStore) FindSimilarChunks(ctx context.Context, vector []float32) ([]SimilarChunk, error) {
+	res, err := s.queries.FindSimilarChunks(ctx, pg.FindSimilarChunksParams{
+		Embedding: pgvector.NewVector(vector),
+		Limit:     50,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("query failed: %w", err)
+	}
+
+	if len(res) == 0 {
+		return nil, nil
+	}
+
+	return unmarshalSimilarChunks(res), nil
 }
