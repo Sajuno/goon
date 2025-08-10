@@ -2,7 +2,7 @@ package rag
 
 import (
 	"context"
-	"github.com/sajuno/goon/golang"
+	"github.com/sajuno/goon/language/golang"
 )
 
 type Store interface {

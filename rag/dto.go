@@ -1,7 +1,7 @@
 package rag
 
 import (
-	"github.com/sajuno/goon/golang"
+	"github.com/sajuno/goon/language/golang"
 	"github.com/sajuno/goon/rag/sqlc/pg"
 )
 

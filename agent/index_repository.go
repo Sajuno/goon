@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/pkoukk/tiktoken-go"
-	"github.com/sajuno/goon/golang"
+	"github.com/sajuno/goon/language/golang"
 	"github.com/sajuno/goon/rag"
 	"github.com/sashabaranov/go-openai"
 	"log"
@@ -31,7 +31,7 @@ func (a *Agent) batchEmbedChunks(ctx context.Context, chunks []golang.Chunk) ([]
 	}
 
 	// OpenAI's limit is 300k, but we're leaving some room for token inflation etc.
-	maxTokens := 200_000
+	maxTokens := 100_000
 	var (
 		batchContents  []string
 		batchChunks    []golang.Chunk

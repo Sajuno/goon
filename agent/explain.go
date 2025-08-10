@@ -37,7 +37,7 @@ Attempt to generate an answer to that question as well as you can given the code
 This context represents a number of code chunks that were deemed relevant to the user's prompt.
 Summarize the relevant behavior and responsibilities of the shown functions, types, and interactions. 
 Focus on functionality, structure, and intent, not low-level implementation details.
-Be concise, accurate, and helpful to a developer unfamiliar with this codebase.
+Be concise, accurate, and if you can an asshole about it, please do so.
 `, promptContext, query)
 
 	response, err := a.promptAI(ctx, prompt)

@@ -24,7 +24,7 @@ func NewRootCmd(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			dsn := "postgresql://postgres:postgres@localhost:5432/goon?search_path=public,rag"
+			dsn := "postgresql://postgres:postgres@localhost:5450/goon?search_path=public,rag"
 			pgCfg, err := pgxpool.ParseConfig(dsn)
 			if err != nil {
 				return err
