@@ -44,7 +44,7 @@ func (a *Agent) batchEmbedChunks(ctx context.Context, chunks []golang.Chunk) ([]
 			return nil
 		}
 
-		resp, err := a.client.CreateEmbeddings(ctx, openai.EmbeddingRequestStrings{
+		resp, err := a.openai.CreateEmbeddings(ctx, openai.EmbeddingRequestStrings{
 			Input: batchContents,
 			Model: openai.SmallEmbedding3,
 		})

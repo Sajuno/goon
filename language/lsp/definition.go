@@ -1,19 +1,18 @@
-package gopls
+package lsp
 
 import (
 	"encoding/json"
 	"fmt"
 	"github.com/google/uuid"
-	"github.com/sajuno/goon/language/lsp"
 )
 
-func (c *Client) GoToDefinition(uri string, line, char int) (*lsp.Location, error) {
-	params := lsp.TextDocumentPositionParams{
-		TextDocument: lsp.TextDocumentIdentifier{URI: uri},
-		Position:     lsp.Position{Line: line, Character: char},
+func (c *Client) GoToDefinition(uri string, line, char int) (*Location, error) {
+	params := TextDocumentPositionParams{
+		TextDocument: TextDocumentIdentifier{URI: uri},
+		Position:     Position{Line: line, Character: char},
 	}
 	paramBytes, _ := json.Marshal(params)
-	msg := &lsp.Message{
+	msg := &Message{
 		ID:     uuid.NewString(),
 		Method: "textDocument/definition",
 		Params: paramBytes,
@@ -28,9 +27,9 @@ func (c *Client) GoToDefinition(uri string, line, char int) (*lsp.Location, erro
 		return nil, err
 	}
 
-	var locations []lsp.Location
+	var locations []Location
 	if err := json.Unmarshal(resp.Result, &locations); err != nil {
-		var single lsp.Location
+		var single Location
 		if err2 := json.Unmarshal(resp.Result, &single); err2 == nil {
 			locations = append(locations, single)
 		} else {

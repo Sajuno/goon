@@ -39,12 +39,12 @@ func buildPromptContext(chunks []rag.Chunk, maxTokens int) string {
 }
 
 func (a *Agent) promptAI(ctx context.Context, prompt string) (string, error) {
-	thread, err := a.client.CreateThread(ctx, openai.ThreadRequest{})
+	thread, err := a.openai.CreateThread(ctx, openai.ThreadRequest{})
 	if err != nil {
 		return "", fmt.Errorf("failed to create new thread: %w", err)
 	}
 
-	_, err = a.client.CreateMessage(ctx, thread.ID, openai.MessageRequest{
+	_, err = a.openai.CreateMessage(ctx, thread.ID, openai.MessageRequest{
 		Role:    openai.ChatMessageRoleUser,
 		Content: prompt,
 	})
@@ -52,7 +52,7 @@ func (a *Agent) promptAI(ctx context.Context, prompt string) (string, error) {
 		return "", fmt.Errorf("failed to create new message: %w", err)
 	}
 
-	run, err := a.client.CreateRun(ctx, thread.ID, openai.RunRequest{
+	run, err := a.openai.CreateRun(ctx, thread.ID, openai.RunRequest{
 		AssistantID: a.cfg.ID,
 	})
 	if err != nil {
@@ -62,7 +62,7 @@ func (a *Agent) promptAI(ctx context.Context, prompt string) (string, error) {
 	// TODO: add timeout
 	for {
 		time.Sleep(time.Second)
-		runStatus, _ := a.client.RetrieveRun(ctx, thread.ID, run.ID)
+		runStatus, _ := a.openai.RetrieveRun(ctx, thread.ID, run.ID)
 
 		switch runStatus.Status {
 		case openai.RunStatusCompleted:
@@ -76,7 +76,7 @@ func (a *Agent) promptAI(ctx context.Context, prompt string) (string, error) {
 		}
 	}
 
-	res, err := a.client.ListMessage(ctx, thread.ID, nil, nil, nil, nil, nil)
+	res, err := a.openai.ListMessage(ctx, thread.ID, nil, nil, nil, nil, nil)
 	if err != nil {
 		return "", fmt.Errorf("failed to list message: %w", err)
 	}

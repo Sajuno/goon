@@ -8,7 +8,7 @@ import (
 )
 
 func (a *Agent) Explain(ctx context.Context, query string) (string, error) {
-	resp, err := a.client.CreateEmbeddings(ctx, openai.EmbeddingRequest{
+	resp, err := a.openai.CreateEmbeddings(ctx, openai.EmbeddingRequest{
 		Input: query,
 		Model: openai.SmallEmbedding3,
 	})

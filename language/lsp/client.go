@@ -1,15 +1,11 @@
-package gopls
+package lsp
 
 import (
 	"bufio"
-	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/google/uuid"
-	"github.com/sajuno/goon/language/lsp"
 	"io"
-	"log"
-	"os/exec"
 	"strconv"
 	"strings"
 )
@@ -17,68 +13,23 @@ import (
 type Client struct {
 	stdin  io.WriteCloser
 	stdout *bufio.Reader
-	stderr *bufio.Scanner
-
-	cmd    *exec.Cmd
-	cancel context.CancelFunc
 }
 
-func NewClient(ctx context.Context) (*Client, error) {
-	ctx, cancel := context.WithCancel(ctx)
-	cmd := exec.CommandContext(ctx, "gopls", "-mode=stdio")
-
-	stdin, err := cmd.StdinPipe()
-	if err != nil {
-		cancel()
-		return nil, err
-	}
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		cancel()
-		return nil, err
-	}
-	stderrPipe, err := cmd.StderrPipe()
-	if err != nil {
-		cancel()
-		return nil, err
-	}
-
-	if err := cmd.Start(); err != nil {
-		cancel()
-		return nil, err
-	}
-
+func NewClient(s Server) (*Client, error) {
 	client := &Client{
-		stdin:  stdin,
-		stdout: bufio.NewReader(stdout),
-		stderr: bufio.NewScanner(stderrPipe),
-		cmd:    cmd,
-		cancel: cancel,
+		stdin:  s.Stdin(),
+		stdout: s.Stdout(),
 	}
-
-	// small side car process for error logging
-	go client.logStderr()
 
 	if err := client.initialize(); err != nil {
-		cancel()
+		s.Close()
 		return nil, err
 	}
 
 	return client, nil
 }
 
-func (c *Client) logStderr() {
-	for c.stderr.Scan() {
-		log.Printf("[gopls] %s", c.stderr.Text())
-	}
-}
-
-func (c *Client) Close() error {
-	c.cancel()
-	return c.cmd.Wait()
-}
-
-func (c *Client) send(msg *lsp.Message) error {
+func (c *Client) send(msg *Message) error {
 	data, err := json.Marshal(msg)
 	if err != nil {
 		return err
@@ -93,7 +44,7 @@ func (c *Client) send(msg *lsp.Message) error {
 	return err
 }
 
-func (c *Client) read() (*lsp.Message, error) {
+func (c *Client) read() (*Message, error) {
 	header := ""
 	for {
 		line, err := c.stdout.ReadString('\n')
@@ -114,7 +65,7 @@ func (c *Client) read() (*lsp.Message, error) {
 		return nil, err
 	}
 
-	var msg lsp.Message
+	var msg Message
 	if err := json.Unmarshal(body, &msg); err != nil {
 		return nil, err
 	}
@@ -139,10 +90,10 @@ func (c *Client) initialize() error {
 	params := map[string]interface{}{
 		"processId":    nil,
 		"rootUri":      nil,
-		"capabilities": map[string]interface{}{},
+		"capabilities": map[string]any{},
 	}
 	paramBytes, _ := json.Marshal(params)
-	msg := &lsp.Message{
+	msg := &Message{
 		ID:     uuid.NewString(),
 		Method: "initialize",
 		Params: paramBytes,
@@ -156,5 +107,5 @@ func (c *Client) initialize() error {
 		return err
 	}
 
-	return c.send(&lsp.Message{Method: "initialized"})
+	return c.send(&Message{Method: "initialized"})
 }

@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"github.com/sajuno/goon/language/lsp"
 	"github.com/sajuno/goon/rag"
 	"github.com/sashabaranov/go-openai"
 )
@@ -11,10 +12,11 @@ type AssistantConfig struct {
 type Agent struct {
 	cfg AssistantConfig
 
-	client   *openai.Client
+	openai   *openai.Client
 	ragStore rag.Store
+	lsp      *lsp.Client
 }
 
-func New(client *openai.Client, ragStore rag.Store, cfg AssistantConfig) *Agent {
-	return &Agent{cfg: cfg, client: client, ragStore: ragStore}
+func New(openai *openai.Client, ragStore rag.Store, cfg AssistantConfig, lsp *lsp.Client) *Agent {
+	return &Agent{cfg: cfg, openai: openai, ragStore: ragStore, lsp: lsp}
 }
