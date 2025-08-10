@@ -7,6 +7,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	pgxvec "github.com/pgvector/pgvector-go/pgx"
 	"github.com/sajuno/goon/agent"
+	"github.com/sajuno/goon/language/lsp"
 	"github.com/sajuno/goon/rag"
 	"github.com/sashabaranov/go-openai"
 	"github.com/spf13/cobra"
@@ -41,7 +42,12 @@ func NewRootCmd(ctx context.Context) *cobra.Command {
 				return fmt.Errorf("postgres not ready: %w", err)
 			}
 
-			ag = agent.New(openai.NewClient(cfg.APIKey), rag.NewPGStore(pool), agent.AssistantConfig{ID: cfg.AssistantID})
+			lspClient, err := lsp.NewGoplsClient(ctx)
+			if err != nil {
+				return err
+			}
+
+			ag = agent.New(openai.NewClient(cfg.APIKey), rag.NewPGStore(pool), agent.AssistantConfig{ID: cfg.AssistantID}, lspClient)
 			return nil
 		},
 	}
@@ -49,6 +55,7 @@ func NewRootCmd(ctx context.Context) *cobra.Command {
 	cmd.AddCommand(goonExplain(ctx))
 	cmd.AddCommand(goonIndex(ctx))
 	cmd.AddCommand(goonRepl(ctx))
+	cmd.AddCommand(configure(ctx))
 
 	return cmd
 }

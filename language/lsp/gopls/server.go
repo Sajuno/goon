@@ -61,7 +61,7 @@ func Start(ctx context.Context) (*Server, error) {
 func (c *Server) logStderr() {
 	// TODO: pipe this to some kind of error channel instead
 	for c.stderr.Scan() {
-		log.Printf("[gopls] %s", c.stderr.Text())
+		log.Printf(c.stderr.Text())
 	}
 }
 

@@ -1,6 +1,9 @@
 package lsp
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"github.com/google/uuid"
+)
 
 type Message struct {
 	JsonRPC string          `json:"jsonrpc"`
@@ -9,6 +12,15 @@ type Message struct {
 	Params  json.RawMessage `json:"params,omitempty"`
 	Result  json.RawMessage `json:"result,omitempty"`
 	Error   *Error          `json:"error,omitempty"`
+}
+
+func newMessage(method string, params json.RawMessage) *Message {
+	return &Message{
+		JsonRPC: "2.0",
+		ID:      uuid.NewString(),
+		Method:  method,
+		Params:  params,
+	}
 }
 
 type Error struct {

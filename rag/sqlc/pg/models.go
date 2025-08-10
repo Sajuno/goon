@@ -10,17 +10,17 @@ import (
 )
 
 type CodeChunk struct {
-	ID           pgtype.UUID
-	SymbolName   string
-	SymbolType   string
-	Package      string
-	StartLine    int32
-	EndLine      int32
-	Content      string
-	Doc          pgtype.Text
-	ReceiverName pgtype.Text
-	Embedding    pgvector.Vector
-	TokenCount   int32
-	Sha256       string
-	CreatedAt    pgtype.Timestamptz
+	ID         pgtype.UUID
+	SymbolName string
+	SymbolType string
+	Package    string
+	FilePath   string
+	StartLine  int32
+	EndLine    int32
+	Content    string
+	Doc        pgtype.Text
+	Embedding  pgvector.Vector
+	TokenCount int32
+	Sha256     string
+	CreatedAt  pgtype.Timestamptz
 }

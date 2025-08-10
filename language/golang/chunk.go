@@ -11,7 +11,6 @@ import (
 	"golang.org/x/tools/go/packages"
 	"io"
 	"os"
-	"sort"
 	"strconv"
 	"strings"
 )
@@ -54,15 +53,6 @@ type Chunk struct {
 
 	// Optional comments
 	Doc string
-
-	// Receiver is only populated for methods
-	ReceiverName string
-
-	// Chunk FQN's this chunk references
-	References []string
-
-	// Chunk FQN's this chunk calls
-	Calls []string
 }
 
 // Sha256 returns the chunks checksum based on a couple of fields
@@ -75,13 +65,6 @@ func (c Chunk) Sha256() string {
 	_, _ = io.WriteString(h, c.Content)
 	sum := h.Sum(nil)
 	return hex.EncodeToString(sum)
-}
-
-func (c Chunk) FQN() string {
-	if c.ReceiverName != "" {
-		return fmt.Sprintf("%s.(%s).%s", c.Package, c.ReceiverName, c.Name)
-	}
-	return fmt.Sprintf("%s.%s", c.Package, c.Name)
 }
 
 func (c Chunk) IsInvokable() bool {
@@ -103,7 +86,6 @@ func ChunkRepository(path string) ([]Chunk, error) {
 	for _, pkg := range pkgs {
 		fset := pkg.Fset
 		info := pkg.TypesInfo
-		objectToFQN := make(map[types.Object]string)
 
 		// Collect all chunks and build object -> FQN map
 		var pkgChunks []Chunk
@@ -114,17 +96,8 @@ func ChunkRepository(path string) ([]Chunk, error) {
 			}
 
 			for _, chunk := range chunks {
-				if obj := getObject(chunk, info, fset); obj != nil {
-					objectToFQN[obj] = chunk.FQN()
-				}
 				pkgChunks = append(pkgChunks, chunk)
 			}
-		}
-
-		// resolve all actual refs and assign them to the chunk
-		// so modifies chunk under the hood
-		for i := range pkgChunks {
-			resolveReferences(&pkgChunks[i], pkg.Syntax, info, objectToFQN, fset)
 		}
 
 		allChunks = append(allChunks, pkgChunks...)
@@ -154,22 +127,17 @@ func chunkASTFile(file *ast.File, fset *token.FileSet, pkgPath string, info *typ
 			if strings.HasPrefix(d.Name.Name, "Test") {
 				kind = ChunkKindTest
 			}
-			receiver, ok := getReceiver(d)
-			if ok {
-				kind = ChunkKindMethod
-			}
 
 			chunks = append(chunks, Chunk{
-				ID:           uuid.NewString(),
-				Content:      source[start.Offset:end.Offset],
-				FilePath:     filename,
-				Package:      pkgPath,
-				Kind:         kind,
-				Name:         d.Name.Name,
-				StartLine:    start.Line,
-				EndLine:      end.Line,
-				Doc:          d.Doc.Text(),
-				ReceiverName: receiver,
+				ID:        uuid.NewString(),
+				Content:   source[start.Offset:end.Offset],
+				FilePath:  filename,
+				Package:   pkgPath,
+				Kind:      kind,
+				Name:      d.Name.Name,
+				StartLine: start.Line,
+				EndLine:   end.Line,
+				Doc:       d.Doc.Text(),
 			})
 
 		case *ast.GenDecl:
@@ -235,84 +203,4 @@ func classifyGenDecl(decl *ast.GenDecl) ChunkKind {
 	default:
 	}
 	return ChunkKindUnknown
-}
-
-// getReceiver determines the receiver name and if it exists
-func getReceiver(fn *ast.FuncDecl) (string, bool) {
-	if fn.Recv == nil || len(fn.Recv.List) == 0 {
-		return "", false
-	}
-
-	recvType := fn.Recv.List[0].Type
-
-	switch expr := recvType.(type) {
-	case *ast.StarExpr:
-		if ident, ok := expr.X.(*ast.Ident); ok {
-			return ident.Name, true
-		}
-	case *ast.Ident:
-		return expr.Name, true
-	}
-
-	return "", false
-}
-
-// getObject finds the object definition based on chunk metadata
-func getObject(chunk Chunk, info *types.Info, fset *token.FileSet) types.Object {
-	for ident, obj := range info.Defs {
-		if ident == nil || obj == nil {
-			continue
-		}
-		if ident.Name != chunk.Name {
-			continue
-		}
-		pos := fset.Position(ident.Pos())
-		if pos.Line == chunk.StartLine {
-			return obj
-		}
-	}
-	return nil
-}
-
-func resolveReferences(
-	chunk *Chunk,
-	files []*ast.File,
-	info *types.Info,
-	objectToFQN map[types.Object]string,
-	fset *token.FileSet,
-) {
-	referenced := make(map[string]struct{})
-
-	for _, file := range files {
-		ast.Inspect(file, func(n ast.Node) bool {
-			if n == nil {
-				return false
-			}
-			pos := fset.Position(n.Pos())
-			if pos.Line < chunk.StartLine || pos.Line > chunk.EndLine {
-				return false
-			}
-
-			id, ok := n.(*ast.Ident)
-			if !ok {
-				return true
-			}
-
-			obj := info.Uses[id]
-			if obj == nil {
-				return true
-			}
-
-			if fqn, ok := objectToFQN[obj]; ok && fqn != chunk.FQN() {
-				referenced[fqn] = struct{}{}
-			}
-
-			return true
-		})
-	}
-
-	for fqn := range referenced {
-		chunk.References = append(chunk.References, fqn)
-	}
-	sort.Strings(chunk.References)
 }

@@ -13,9 +13,9 @@ import (
 )
 
 const createChunk = `-- name: CreateChunk :one
-INSERT INTO code_chunks (symbol_name, symbol_type, start_line, end_line, content, doc, embedding, token_count, sha256, package)
-VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-RETURNING id, symbol_name, symbol_type, package, start_line, end_line, content, doc, receiver_name, embedding, token_count, sha256, created_at
+INSERT INTO code_chunks (symbol_name, symbol_type, start_line, end_line, content, doc, embedding, token_count, sha256, package, file_path)
+VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+RETURNING id, symbol_name, symbol_type, package, file_path, start_line, end_line, content, doc, embedding, token_count, sha256, created_at
 `
 
 type CreateChunkParams struct {
@@ -29,6 +29,7 @@ type CreateChunkParams struct {
 	TokenCount int32
 	Sha256     string
 	Package    string
+	FilePath   string
 }
 
 func (q *Queries) CreateChunk(ctx context.Context, arg CreateChunkParams) (CodeChunk, error) {
@@ -43,6 +44,7 @@ func (q *Queries) CreateChunk(ctx context.Context, arg CreateChunkParams) (CodeC
 		arg.TokenCount,
 		arg.Sha256,
 		arg.Package,
+		arg.FilePath,
 	)
 	var i CodeChunk
 	err := row.Scan(
@@ -50,11 +52,11 @@ func (q *Queries) CreateChunk(ctx context.Context, arg CreateChunkParams) (CodeC
 		&i.SymbolName,
 		&i.SymbolType,
 		&i.Package,
+		&i.FilePath,
 		&i.StartLine,
 		&i.EndLine,
 		&i.Content,
 		&i.Doc,
-		&i.ReceiverName,
 		&i.Embedding,
 		&i.TokenCount,
 		&i.Sha256,
@@ -64,21 +66,21 @@ func (q *Queries) CreateChunk(ctx context.Context, arg CreateChunkParams) (CodeC
 }
 
 type CreateChunksParams struct {
-	SymbolName   string
-	SymbolType   string
-	StartLine    int32
-	EndLine      int32
-	Content      string
-	Doc          pgtype.Text
-	ReceiverName pgtype.Text
-	Embedding    pgvector.Vector
-	TokenCount   int32
-	Sha256       string
-	Package      string
+	SymbolName string
+	SymbolType string
+	StartLine  int32
+	EndLine    int32
+	Content    string
+	Doc        pgtype.Text
+	Embedding  pgvector.Vector
+	TokenCount int32
+	Sha256     string
+	Package    string
+	FilePath   string
 }
 
 const findSimilarChunks = `-- name: FindSimilarChunks :many
-SELECT id, symbol_name, symbol_type, package, start_line, end_line, content, doc, receiver_name, embedding, token_count, sha256, created_at,
+SELECT id, symbol_name, symbol_type, package, file_path, start_line, end_line, content, doc, embedding, token_count, sha256, created_at,
        embedding <-> $1 AS distance
 FROM code_chunks
 ORDER BY embedding <-> $1
@@ -91,20 +93,20 @@ type FindSimilarChunksParams struct {
 }
 
 type FindSimilarChunksRow struct {
-	ID           pgtype.UUID
-	SymbolName   string
-	SymbolType   string
-	Package      string
-	StartLine    int32
-	EndLine      int32
-	Content      string
-	Doc          pgtype.Text
-	ReceiverName pgtype.Text
-	Embedding    pgvector.Vector
-	TokenCount   int32
-	Sha256       string
-	CreatedAt    pgtype.Timestamptz
-	Distance     interface{}
+	ID         pgtype.UUID
+	SymbolName string
+	SymbolType string
+	Package    string
+	FilePath   string
+	StartLine  int32
+	EndLine    int32
+	Content    string
+	Doc        pgtype.Text
+	Embedding  pgvector.Vector
+	TokenCount int32
+	Sha256     string
+	CreatedAt  pgtype.Timestamptz
+	Distance   interface{}
 }
 
 func (q *Queries) FindSimilarChunks(ctx context.Context, arg FindSimilarChunksParams) ([]FindSimilarChunksRow, error) {
@@ -121,11 +123,11 @@ func (q *Queries) FindSimilarChunks(ctx context.Context, arg FindSimilarChunksPa
 			&i.SymbolName,
 			&i.SymbolType,
 			&i.Package,
+			&i.FilePath,
 			&i.StartLine,
 			&i.EndLine,
 			&i.Content,
 			&i.Doc,
-			&i.ReceiverName,
 			&i.Embedding,
 			&i.TokenCount,
 			&i.Sha256,

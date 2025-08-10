@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"github.com/google/uuid"
 	"io"
 	"strconv"
 	"strings"
@@ -93,12 +92,7 @@ func (c *Client) initialize() error {
 		"capabilities": map[string]any{},
 	}
 	paramBytes, _ := json.Marshal(params)
-	msg := &Message{
-		ID:     uuid.NewString(),
-		Method: "initialize",
-		Params: paramBytes,
-	}
-	if err := c.send(msg); err != nil {
+	if err := c.send(newMessage("initialize", paramBytes)); err != nil {
 		return err
 	}
 
@@ -107,5 +101,5 @@ func (c *Client) initialize() error {
 		return err
 	}
 
-	return c.send(&Message{Method: "initialized"})
+	return c.send(newMessage("initialize", nil))
 }
